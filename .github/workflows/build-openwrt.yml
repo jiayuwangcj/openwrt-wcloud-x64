@@ -83,6 +83,7 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
+        cp openwrt/.config openwrt/config.final
 
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
@@ -104,7 +105,7 @@ jobs:
     - name: Upload .config
       uses: actions/upload-artifact@main
       with:
-        name: .config
+        name: config.final
         path: openwrt
 
     - name: Download package
