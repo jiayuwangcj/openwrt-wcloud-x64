@@ -104,8 +104,8 @@ jobs:
     - name: Upload config
       uses: actions/upload-artifact@main
       with:
-        name: .config
-        path: openwrt
+        name: config
+        path: openwrt/.config
 
     - name: Download package
       id: package
