@@ -18,10 +18,12 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-
+  push:
+    branches:
+      - master
 env:
-  REPO_URL: https://github.com/coolsnowwolf/lede
-  REPO_BRANCH: master
+  REPO_URL: https://github.com/openwrt/openwrt
+  REPO_BRANCH: v22.03.0
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
   DIY_P1_SH: diy-part1.sh
@@ -39,7 +41,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@main
+      uses: actions/checkout@${GITHUB_REF##*/}
 
     - name: Initialization environment
       env:
