@@ -101,6 +101,12 @@ jobs:
     #     echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
     #     echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
 
+    - name: Upload config
+      uses: actions/upload-artifact@v2
+      with:
+        name: config
+        path: /workdir/openwrt/.config
+
     - name: Download package
       id: package
       run: |
@@ -126,7 +132,7 @@ jobs:
       run: df -hT
 
     - name: Upload bin directory
-      uses: actions/upload-artifact@main
+      uses: actions/upload-artifact@v3
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
         name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
@@ -142,7 +148,7 @@ jobs:
         echo "::set-output name=status::success"
 
     - name: Upload firmware directory
-      uses: actions/upload-artifact@main
+      uses: actions/upload-artifact@v3
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
