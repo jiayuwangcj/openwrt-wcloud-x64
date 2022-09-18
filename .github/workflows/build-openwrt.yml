@@ -83,7 +83,6 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
-        cp .config config.final
 
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
@@ -102,10 +101,10 @@ jobs:
     #     echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
     #     echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
 
-    - name: Upload .config
+    - name: Upload config
       uses: actions/upload-artifact@main
       with:
-        name: config.final
+        name: .config
         path: openwrt
 
     - name: Download package
