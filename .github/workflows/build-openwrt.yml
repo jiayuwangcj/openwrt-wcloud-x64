@@ -101,12 +101,6 @@ jobs:
     #     echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
     #     echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
 
-    - name: Upload config
-      uses: actions/upload-artifact@main
-      with:
-        name: config
-        path: openwrt/.config
-
     - name: Download package
       id: package
       run: |
