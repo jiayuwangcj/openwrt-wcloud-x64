@@ -142,6 +142,7 @@ jobs:
         sudo unsquashfs openwrt-x86-64-generic-squashfs-rootfs.img
         sudo tar zcf ./openwrt-lxc.rootfs.tar.gz squashfs-root/*
         sudo rm -rf squashfs-root
+        gzip unsquashfs openwrt-x86-64-generic-squashfs-rootfs.img
 
     - name: Upload bin directory
       uses: actions/upload-artifact@v3
