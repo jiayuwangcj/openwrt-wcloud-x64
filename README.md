@@ -1,6 +1,33 @@
+# 个人使用，一些pve lxc相关入门脚本
+
 **English** | [中文](https://p3terx.com/archives/build-openwrt-with-github-actions.html)
 
-# Actions-OpenWrt
+## PVE shell use lxc scripts
+
+``` bash
+pveam list # 显示所有可用的lxc模版
+pveperf # 简单性能测试
+
+# 在ubuntu上用unsquashfs 创建的lxc容器似乎有问题，无法启动，还是在pve上直接创建吧
+apt install squashfs-tools
+unsquashfs openwrt-x86-64-generic-squashfs-rootfs.img
+cd squashfs-root
+tar zcf ../openwrt201117.rootfs.tar.gz *
+cd ..
+mv /var/lib/vz/template/cache /var/lib/vz/template/cache
+pveam list local  # 显示已经在本地的模版
+
+
+# 以下开始创建lxc容器
+pct create 202 local:vztmpl/openwrt201117.rootfs.tar.gz --rootfs local-lvm:1 --ostype unmanaged --hostname CTOpenWrt --arch amd64 --cores 2 --memory 512 --swap 0 -net0 bridge=vmbr0,name=eth0
+
+# 这里需要更新pve版本，否则无法创建
+pct create 101 local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst --rootfs local-lvm:100 -cores 4 -memory 4096 --swap 8192 -net0 bridge=vmbr0,name=eth0,ip=192.168.10.9/24,gw=192.168.10.2 -ostype ubuntu -hostname ubuntu22 -password
+
+
+```
+
+## Actions-OpenWrt
 
 [![LICENSE](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square&label=LICENSE)](https://github.com/P3TERX/Actions-OpenWrt/blob/master/LICENSE)
 ![GitHub Stars](https://img.shields.io/github/stars/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Stars&logo=github)

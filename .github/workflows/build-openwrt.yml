@@ -133,16 +133,16 @@ jobs:
       if: (!cancelled())
       run: df -hT
 
-    - name: Create LXC template
-      if: (!cancelled())
-      run: |
-        cd openwrt/bin/targets/*/*
-        tree
-        gunzip openwrt-x86-64-generic-squashfs-rootfs.img.gz
-        sudo unsquashfs openwrt-x86-64-generic-squashfs-rootfs.img
-        sudo tar zcf ./openwrt-lxc.rootfs.tar.gz squashfs-root/*
-        sudo rm -rf squashfs-root
-        gzip openwrt-x86-64-generic-squashfs-rootfs.img
+    # - name: Create LXC template
+    #   if: (!cancelled())
+    #   run: |
+    #     cd openwrt/bin/targets/*/*
+    #     tree
+    #     gunzip openwrt-x86-64-generic-squashfs-rootfs.img.gz
+    #     sudo unsquashfs openwrt-x86-64-generic-squashfs-rootfs.img
+    #     sudo tar zcf ./openwrt-lxc.rootfs.tar.gz squashfs-root/*
+    #     sudo rm -rf squashfs-root
+    #     gzip openwrt-x86-64-generic-squashfs-rootfs.img
 
     - name: Upload bin directory
       uses: actions/upload-artifact@v3
