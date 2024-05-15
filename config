@@ -5770,6 +5770,7 @@ CONFIG_PACKAGE_pppstats=y
 # CONFIG_PACKAGE_simple-adblock is not set
 # CONFIG_PACKAGE_slirp4netns is not set
 # CONFIG_PACKAGE_smartdns is not set
+CONFIG_PACKAGE_sing-box=y
 # CONFIG_PACKAGE_smbinfo is not set
 # CONFIG_PACKAGE_snmp-mibs is not set
 # CONFIG_PACKAGE_snmp-utils is not set
