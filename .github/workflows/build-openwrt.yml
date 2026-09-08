@@ -20,7 +20,7 @@ on:
         default: 'false'
   push:
     branches:
-      - master
+      - wireguard-v22.03.0
 env:
   REPO_URL: https://github.com/openwrt/openwrt
   REPO_BRANCH: v22.03.0
