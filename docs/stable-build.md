@@ -34,14 +34,22 @@ obsolete `luci-ssl-nginx`/`nginx-all-module` names and removed nft-qos/ipset-dns
 selections are not carried forward. SQM/CAKE and DNSPod China DDNS are available,
 but are not enabled/configured by this repository. No secrets are baked in.
 
-Only matching TUN/CAKE/IFB modules from this build are selected. Kernel WireGuard
-and wireguard-tools are excluded. Never copy old `.ko` files or force-install
-modules into the new firmware.
+The firmware now includes standard `kmod-wireguard`, `wireguard-tools` and
+`luci-proto-wireguard`, alongside matching TUN/CAKE/IFB modules from this build.
+These modules are compiled against the same kernel and ABI as the image; never
+copy old `.ko` files or force-install modules into the new firmware. CI checks both
+the resolved configuration and final image manifests for all three WireGuard packages.
 
 Production `highflowd`, `highflow-helper`, private configuration and userspace
 `wireguard-go` binaries are **not bundled by this baseline update**. Their packaging,
 integrity checks, service paths and migration remain separate work. This is not
 a ready-to-flash highflow appliance.
+
+Standard WireGuard is available for future netifd/UCI/LuCI configuration, but no
+tunnel, key, address, route, firewall change or peer identity is preconfigured.
+The production userspace tunnel remains untouched. Its qualification/port-handoff,
+supervision and route-lease workflow is not automatically replaced by stock WireGuard.
+Validate any transition in an isolated console-backed VM before changing production.
 
 ## Upgrade safety: 22.03.0 to 25.12.5
 

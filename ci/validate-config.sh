@@ -11,7 +11,7 @@ while IFS= read -r setting; do
         failed=1
     fi
 done < "$seed"
-for forbidden in kmod-wireguard wireguard-tools dropbear ip-tiny; do
+for forbidden in wireguard-go dropbear ip-tiny; do
     if grep -Eq "^CONFIG_PACKAGE_${forbidden}=[ym]$" "$resolved"; then
         printf 'CONFIG_FORBIDDEN_SELECTED: %s\n' "$forbidden" >&2
         failed=1

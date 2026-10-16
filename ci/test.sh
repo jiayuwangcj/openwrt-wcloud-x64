@@ -11,7 +11,14 @@ if bash ci/validate-config.sh config "$fixture_dir/missing" > "$fixture_dir/miss
     echo 'TEST_FAILED: missing package was accepted' >&2; exit 1
 fi
 grep -q 'CONFIG_REQUIRED_MISSING: CONFIG_PACKAGE_zerotier=y' "$fixture_dir/missing.log"
-for forbidden in kmod-wireguard wireguard-tools dropbear ip-tiny; do
+for required in kmod-wireguard wireguard-tools luci-proto-wireguard; do
+    sed "/^CONFIG_PACKAGE_${required}=y$/d" config > "$fixture_dir/missing-wireguard"
+    if bash ci/validate-config.sh config "$fixture_dir/missing-wireguard" > "$fixture_dir/missing-wireguard.log" 2>&1; then
+        echo "TEST_FAILED: missing standard WireGuard package $required was accepted" >&2; exit 1
+    fi
+    grep -q "CONFIG_REQUIRED_MISSING: CONFIG_PACKAGE_${required}=y" "$fixture_dir/missing-wireguard.log"
+done
+for forbidden in wireguard-go dropbear ip-tiny; do
     cp config "$fixture_dir/forbidden"
     printf 'CONFIG_PACKAGE_%s=m\n' "$forbidden" >> "$fixture_dir/forbidden"
     if bash ci/validate-config.sh config "$fixture_dir/forbidden" > "$fixture_dir/forbidden.log" 2>&1; then
@@ -26,6 +33,9 @@ for image in squashfs-combined squashfs-combined-efi ext4-combined; do
     printf 'test-image-%s\n' "$image" > "$fixture_images/openwrt-x86-64-generic-$image.img.gz"
 done
 printf 'do-not-upload\n' > "$fixture_images/packages/private.apk"
+for required in kmod-wireguard wireguard-tools luci-proto-wireguard; do
+    printf '%s - test-version\n' "$required" >> "$fixture_images/openwrt-test.manifest"
+done
 (
     cd "$fixture_images"
     sha256sum ./*.img.gz > sha256sums
@@ -35,6 +45,12 @@ test ! -e "$fixture_dir/output/packages"
 if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/output" > /dev/null 2>&1; then
     echo 'TEST_FAILED: existing output was overwritten' >&2; exit 1
 fi
+cp "$fixture_images/openwrt-test.manifest" "$fixture_dir/complete.manifest"
+sed '/^kmod-wireguard /d' "$fixture_dir/complete.manifest" > "$fixture_images/openwrt-test.manifest"
+if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/missing-package-output" > /dev/null 2>&1; then
+    echo 'TEST_FAILED: missing WireGuard in image manifest was accepted' >&2; exit 1
+fi
+cp "$fixture_dir/complete.manifest" "$fixture_images/openwrt-test.manifest"
 printf 'corrupted\n' >> "$fixture_images/openwrt-x86-64-generic-ext4-combined.img.gz"
 if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/corrupt-output" > /dev/null 2>&1; then
     echo 'TEST_FAILED: corrupted firmware was accepted' >&2; exit 1
