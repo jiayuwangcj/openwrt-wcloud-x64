@@ -23,6 +23,10 @@ requested setting disappears. Target defaults choose matching hardware drivers.
 BIOS/EFI, ext4/squashfs and rootfs tar images remain available, with the original
 200 MiB kernel / 1800 MiB rootfs partition sizes.
 
+The first CI run passed runner/dependency/feed preparation and caught the removed
+`GRUB_SERIAL` symbol during strict validation. The obsolete setting was removed
+instead of disabling validation; serial device defaults now come from the target.
+
 Core services include PPPoE/IPv6, nginx LuCI/stream, OpenSSH, ZeroTier, OpenVPN,
 UPnP and diagnostic tools. `ip-full` replaces `ip-tiny` for JSON route inspection.
 APK and `luci-app-package-manager` replace the old opkg UI. Legacy optional themes,

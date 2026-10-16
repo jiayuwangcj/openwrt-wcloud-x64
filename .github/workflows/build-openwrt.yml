@@ -77,13 +77,13 @@ jobs:
           fi
           bash "$GITHUB_WORKSPACE/diy-part2.sh"
           make defconfig 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/defconfig.log"
-          bash "$GITHUB_WORKSPACE/ci/validate-config.sh" "$GITHUB_WORKSPACE/config" .config
           cp .config "$RUNNER_TEMP/openwrt-diagnostics/resolved.config"
           ./scripts/diffconfig.sh > "$RUNNER_TEMP/openwrt-diagnostics/diffconfig"
           git rev-parse HEAD > "$RUNNER_TEMP/openwrt-diagnostics/openwrt-commit"
           for feed in packages luci routing telephony video; do
             git -C "feeds/$feed" rev-parse HEAD
           done > "$RUNNER_TEMP/openwrt-diagnostics/feed-commits"
+          bash "$GITHUB_WORKSPACE/ci/validate-config.sh" "$GITHUB_WORKSPACE/config" .config
 
       - name: Download sources
         working-directory: ${{ runner.temp }}/openwrt
