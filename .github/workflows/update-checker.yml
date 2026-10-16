@@ -1,58 +1,21 @@
-#
-# Copyright (c) 2019-2021 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-# File: .github/workflows/update-checker.yml
-# Description: Source code update checker
-#
-
-name: Update Checker
-
-env:
-  REPO_URL: https://github.com/coolsnowwolf/lede
-  REPO_BRANCH: master
+name: Check upstream stable release
 
 on:
   workflow_dispatch:
-#  schedule:
-#    - cron: 0 */18 * * *
+
+permissions:
+  contents: read
 
 jobs:
   check:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
-
-    - name: Get Commit Hash
-      id: getHash
-      run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
-        echo "::set-output name=commitHash::$(git rev-parse HEAD)"
-
-    - name: Compare Commit Hash
-      id: cacheHash
-      uses: actions/cache@v2
-      with:
-        path: .commitHash
-        key: HEAD-${{ steps.getHash.outputs.commitHash }}
-
-    - name: Save New Commit Hash
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
-
-    - name: Trigger build
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@v1
-      with:
-        token: ${{ secrets.ACTIONS_TRIGGER_PAT }}
-        event-type: Source Code Update
-
-    - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
-      with:
-        retain_days: 1
-        keep_minimum_runs: 1
+      - name: Show latest upstream release (read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/openwrt/openwrt/releases/latest \
+            --jq '{tag_name, published_at, html_url}' | tee -a "$GITHUB_STEP_SUMMARY"
+          echo 'Builds use a reviewed pinned release; this check does not update or dispatch builds.' >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,18 @@
 # 个人使用，一些pve lxc相关入门脚本
 
+## 当前固件构建
+
+构建基线已更新至 **OpenWrt 25.12.5 / x86_64**，GitHub Actions 使用
+Ubuntu 24.04 LTS。推送 `build/openwrt-25.12.5` 分支会触发构建，
+固件和诊断文件在对应 Actions 页的 Artifacts 下载（保留 14 天）。
+不自动刷写路由器，也不自动发布/删除 Release。
+
+从现有 22.03.0 跨版本升级存在配置、APK 包管理及内核模块兼容风险，
+必须先在隔离虚拟机验证；完整说明见 [稳定版构建与升级安全](docs/stable-build.md)。
+当前更新不包含生产高速通道守护进程与私有配置的固件打包。
+
+以下内容为历史模板说明。
+
 **English** | [中文](https://p3terx.com/archives/build-openwrt-with-github-actions.html)
 
 ## PVE shell use lxc scripts

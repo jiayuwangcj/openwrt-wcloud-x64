@@ -1,222 +1,134 @@
-#
-# Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-# Description: Build OpenWrt using GitHub Actions
-#
-
 name: Build OpenWrt
 
 on:
-  repository_dispatch:
   workflow_dispatch:
-    inputs:
-      ssh:
-        description: 'SSH connection to Actions'
-        required: false
-        default: 'false'
   push:
-    branches:
-      - master
+    branches: [master, build/openwrt-25.12.5]
+    paths: [config, 'ci/**', 'files/**', 'diy-part*.sh', .github/workflows/build-openwrt.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openwrt-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
-  REPO_URL: https://github.com/openwrt/openwrt
-  REPO_BRANCH: v23.05.3
-  FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: config
-  DIY_P1_SH: diy-part1.sh
-  DIY_P2_SH: diy-part2.sh
-  UPLOAD_BIN_DIR: false
-  UPLOAD_FIRMWARE: false
-  UPLOAD_COWTRANSFER: false
-  UPLOAD_WETRANSFER: true
-  UPLOAD_RELEASE: true
+  OPENWRT_REF: v25.12.5
+  OPENWRT_COMMIT: f0a60eee2fe051741c643ea6118718aae1ef17fb
   TZ: Asia/Shanghai
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
     steps:
-    - name: Checkout
-      uses: actions/checkout@main
+      - name: Checkout build configuration
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-    - name: Initialization environment
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-        sudo -E apt-get -qq update
-        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
-        sudo -E apt-get -qq autoremove --purge
-        sudo -E apt-get -qq clean
-        sudo apt install squashfs-tools
-        sudo apt install gzip
-        sudo timedatectl set-timezone "$TZ"
-        sudo mkdir -p /workdir
-        sudo chown $USER:$GROUPS /workdir
+      - name: Test build harness without compiling firmware
+        run: bash ci/test.sh
 
-    - name: Clone source code
-      working-directory: /workdir
-      run: |
-        df -hT $PWD
-        git clone $REPO_URL -b $REPO_BRANCH openwrt
-        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+      - name: Prepare supported build environment
+        run: |
+          set -euo pipefail
+          # Only disposable SDKs on GitHub's hosted VM, never local/router files.
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang flex bison g++ gawk gcc-multilib g++-multilib \
+            gettext git libncurses-dev libssl-dev python3 python3-setuptools \
+            python3-pyelftools rsync swig unzip zlib1g-dev file wget curl \
+            ca-certificates patch diffutils findutils perl time jq xz-utils \
+            zstd bzip2 cpio squashfs-tools libelf-dev libzstd-dev
+          mkdir -p "$RUNNER_TEMP/openwrt-diagnostics"
+          df -h
 
-    - name: Load custom feeds
-      run: |
-        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        chmod +x $DIY_P1_SH
-        cd openwrt
-        $GITHUB_WORKSPACE/$DIY_P1_SH
+      - name: Clone exact stable release
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$OPENWRT_REF" \
+            https://github.com/openwrt/openwrt.git "$RUNNER_TEMP/openwrt"
+          test "$(git -C "$RUNNER_TEMP/openwrt" rev-parse HEAD)" = "$OPENWRT_COMMIT"
+          cp "$RUNNER_TEMP/openwrt/feeds.conf.default" \
+            "$RUNNER_TEMP/openwrt-diagnostics/feeds.conf.pinned"
 
-    - name: Update feeds
-      run: cd openwrt && ./scripts/feeds update -a
+      - name: Install release-pinned feeds
+        working-directory: ${{ runner.temp }}/openwrt
+        run: |
+          set -euo pipefail
+          bash "$GITHUB_WORKSPACE/diy-part1.sh"
+          ./scripts/feeds update -a 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/feeds-update.log"
+          ./scripts/feeds install -a 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/feeds-install.log"
 
-    - name: Install feeds
-      run: cd openwrt && ./scripts/feeds install -a
+      - name: Resolve and validate configuration
+        working-directory: ${{ runner.temp }}/openwrt
+        run: |
+          set -euo pipefail
+          cp "$GITHUB_WORKSPACE/config" .config
+          if [[ -d "$GITHUB_WORKSPACE/files" ]]; then
+            mkdir -p files
+            cp -a "$GITHUB_WORKSPACE/files/." files/
+          fi
+          bash "$GITHUB_WORKSPACE/diy-part2.sh"
+          make defconfig 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/defconfig.log"
+          bash "$GITHUB_WORKSPACE/ci/validate-config.sh" "$GITHUB_WORKSPACE/config" .config
+          cp .config "$RUNNER_TEMP/openwrt-diagnostics/resolved.config"
+          ./scripts/diffconfig.sh > "$RUNNER_TEMP/openwrt-diagnostics/diffconfig"
+          git rev-parse HEAD > "$RUNNER_TEMP/openwrt-diagnostics/openwrt-commit"
+          for feed in packages luci routing telephony video; do
+            git -C "feeds/$feed" rev-parse HEAD
+          done > "$RUNNER_TEMP/openwrt-diagnostics/feed-commits"
 
-    - name: Load custom configuration
-      run: |
-        [ -e files ] && mv files openwrt/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        chmod +x $DIY_P2_SH
-        cd openwrt
-        $GITHUB_WORKSPACE/$DIY_P2_SH
+      - name: Download sources
+        working-directory: ${{ runner.temp }}/openwrt
+        run: |
+          set -euo pipefail
+          make download -j8 V=s 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/download.log"
 
-    - name: SSH connection to Actions
-      uses: P3TERX/ssh2actions@v1.0.0
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      - name: Compile firmware on GitHub only
+        working-directory: ${{ runner.temp }}/openwrt
+        run: |
+          set -euo pipefail
+          make -j"$(nproc)" V=s 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/build.log" || \
+            make -j1 V=s 2>&1 | tee "$RUNNER_TEMP/openwrt-diagnostics/build-retry.log"
 
-    # - name: Upload .Config to WeTransfer
-    #   id: wetransfer-config
-    #   if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
-    #   run: |
-    #     cd openwrt
-    #     curl -fsSL git.io/file-transfer | sh
-    #     ./transfer wet -s -p 16 --no-progress .config 2>&1 | tee wetransfer.log
-    #     echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-    #     echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
+      - name: Verify and stage firmware
+        run: |
+          set -euo pipefail
+          bash ci/stage-firmware.sh "$RUNNER_TEMP/openwrt" "$RUNNER_TEMP/openwrt-firmware"
+          cp "$RUNNER_TEMP/openwrt-diagnostics/"{resolved.config,diffconfig,openwrt-commit,feed-commits,feeds.conf.pinned} \
+            "$RUNNER_TEMP/openwrt-firmware/"
+          printf 'Configuration commit: %s\nOpenWrt: %s (%s)\n' \
+            "$GITHUB_SHA" "$OPENWRT_REF" "$OPENWRT_COMMIT" \
+            > "$RUNNER_TEMP/openwrt-firmware/build-provenance.txt"
 
-    # - name: Upload config
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: config
-    #     path: /workdir/openwrt/.config
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openwrt-${{ env.OPENWRT_REF }}-x86-64-${{ github.run_id }}
+          path: ${{ runner.temp }}/openwrt-firmware/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
-    - name: Download package
-      id: package
-      run: |
-        cd openwrt
-        make defconfig
-        make download -j8
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
+      - name: Upload diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openwrt-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/openwrt-diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
 
-    - name: Compile the firmware
-      id: compile
-      run: |
-        cd openwrt
-        echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
-        echo "::set-output name=status::success"
-        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
-        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-
-    - name: Check space usage
-      if: (!cancelled())
-      run: df -hT
-
-    # - name: Create LXC template
-    #   if: (!cancelled())
-    #   run: |
-    #     cd openwrt/bin/targets/*/*
-    #     tree
-    #     gunzip openwrt-x86-64-generic-squashfs-rootfs.img.gz
-    #     sudo unsquashfs openwrt-x86-64-generic-squashfs-rootfs.img
-    #     sudo tar zcf ./openwrt-lxc.rootfs.tar.gz squashfs-root/*
-    #     sudo rm -rf squashfs-root
-    #     gzip openwrt-x86-64-generic-squashfs-rootfs.img
-
-    - name: Upload bin directory
-      uses: actions/upload-artifact@v3
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      with:
-        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: openwrt/bin
-
-    - name: Organize files
-      id: organize
-      if: (!cancelled())
-      run: |
-        cd openwrt/bin/targets/*/*
-        rm -rf packages
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "::set-output name=status::success"
-
-
-    - name: Upload firmware directory
-      uses: actions/upload-artifact@v3
-      if: steps.organize.outputs.status == 'success' && !cancelled()
-      with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
-
-    - name: Upload firmware to cowtransfer
-      id: cowtransfer
-      if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-        echo "::set-output name=url::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
-
-    - name: Upload firmware to WeTransfer
-      id: wetransfer
-      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
-        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
-
-    - name: Generate release tag
-      id: tag
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-      run: |
-        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
-        touch release.txt
-        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
-        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
-        echo "::set-output name=status::success"
-
-    - name: Upload firmware to release
-      uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && !cancelled()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: release.txt
-        files: ${{ env.FIRMWARE }}/*
-
-    - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
-      with:
-        retain_days: 1
-        keep_minimum_runs: 1
-
-    - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@v0.1.0
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 3
-        delete_tags: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build summary
+        if: always()
+        run: |
+          printf '### OpenWrt firmware build\n\n- Release: `%s`\n- Source: `%s`\n- Runner: Ubuntu 24.04\n- This workflow never deploys to routers.\n' \
+            "$OPENWRT_REF" "$OPENWRT_COMMIT" >> "$GITHUB_STEP_SUMMARY"
+          df -h >> "$GITHUB_STEP_SUMMARY"
