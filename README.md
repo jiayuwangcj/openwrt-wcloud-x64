@@ -2,7 +2,7 @@
 
 ## 当前固件构建
 
-构建基线已更新至 **OpenWrt 25.12.5 / x86_64**，GitHub Actions 使用
+构建基线已更新至 **OpenWrt 25.12.6 / x86_64**，GitHub Actions 使用
 Ubuntu 24.04 LTS，后续统一在 `master` 维护。推送构建相关文件会触发构建，
 构建并校验通过后，镜像、SHA256 校验文件及构建来源会自动发布到
 [Releases](https://github.com/jiayuwangcj/openwrt-wcloud-x64/releases)。
@@ -18,6 +18,8 @@ SQM 默认不启用，需配置接口和上下行速率。
 当前更新不包含生产高速通道守护进程与私有配置的固件打包。
 固件已选择标准内核 WireGuard、wireguard-tools 及 LuCI 协议支持，
 但不预设隧道、密钥或路由；现有 userspace 高速通道不自动迁移。
+
+上游同步及安全审查见 [上游审查记录](docs/upstream-review.md)。
 
 以下内容为历史模板说明。
 

@@ -2,6 +2,8 @@ name: Check upstream stable release
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * 1'
 
 permissions:
   contents: read
@@ -11,11 +13,20 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - name: Checkout reviewed build version
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Show latest upstream release (read-only)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh api repos/openwrt/openwrt/releases/latest \
-            --jq '{tag_name, published_at, html_url}' | tee -a "$GITHUB_STEP_SUMMARY"
+          pinned=$(sed -nE 's/^  OPENWRT_REF: (v[0-9.]+)$/\1/p' .github/workflows/build-openwrt.yml)
+          test -n "$pinned"
+          latest=$(gh api repos/openwrt/openwrt/releases/latest --jq .tag_name)
+          printf 'Reviewed build: `%s`\n\nUpstream latest: `%s`\n' "$pinned" "$latest" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$pinned" != "$latest" ]]; then
+            echo '::notice::A different stable release is available; review its changes and pinned feeds before updating.'
+          fi
           echo 'Builds use a reviewed pinned release; this check does not update or dispatch builds.' >> "$GITHUB_STEP_SUMMARY"

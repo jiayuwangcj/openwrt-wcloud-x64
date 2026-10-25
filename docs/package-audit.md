@@ -31,7 +31,7 @@ Their existing installed firmware is not the new 25.12.5 build.
 - Compatibility: `ipset`, `iptables-nft`, `ip6tables-nft` for existing tools.
 - Proxy: `sing-box` was found as an unmanaged ELF executable in wrt2's
   overlay, not in its opkg inventory. The new image selects the pinned feed's
-  package. wrt2 reports 1.8.13; the pinned feed is 1.12.17. Its service is
+  package. wrt2 reports 1.8.13; the 25.12.6 pinned feed is 1.13.21. Its service is
   currently disabled. Old config must be migrated and checked before enabling
   it; the old init script and binary are not blindly restored.
 - UI: available Material, OpenWrt and OpenWrt 2020 themes, plus UPnP Chinese
@@ -54,7 +54,7 @@ readlink/mktemp/nohup/env/tr/dd; find/xargs, diff/patch, gawk/sed, flock/getopt.
 Existing tcpdump, iperf3, dig, curl, socat, bash and zsh remain selected.
 These are reusable runtime/diagnostic tools, not private scripts or credentials.
 
-An actual `make defconfig` against source f0a60eee and the same pinned feed
+An actual `make defconfig` against source 64900e75 and the same pinned feed
 commits accepted every requested setting and selected 428 packages. No target
 firmware was compiled locally. Of the original installed names, 210/282 on
 wrt1 and 232/311 on wrt2 appear unchanged; the remainder consists of renamed

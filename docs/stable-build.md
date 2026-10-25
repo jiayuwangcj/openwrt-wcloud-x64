@@ -1,8 +1,8 @@
-# Stable firmware build (2026-10-16)
+# Stable firmware build (updated 2026-10-25)
 
 ## Baseline and CI
 
-- OpenWrt **25.12.5**, commit `f0a60eee2fe051741c643ea6118718aae1ef17fb`.
+- OpenWrt **25.12.6**, commit `64900e756efa667774214f9c6b17c113222e01f7`.
 - OpenWrt calls this a supported stable series, not a separately designated LTS.
 - GitHub standard hosted **Ubuntu 24.04 LTS**, not retired `ubuntu-20.04`.
 - The tag's own `feeds.conf.default` pins all feed commits; do not replace them with moving heads.
@@ -58,7 +58,7 @@ The production userspace tunnel remains untouched. Its qualification/port-handof
 supervision and route-lease workflow is not automatically replaced by stock WireGuard.
 Validate any transition in an isolated console-backed VM before changing production.
 
-## Upgrade safety: 22.03.0 to 25.12.5
+## Upgrade safety: 22.03.0 to 25.12.6
 
 Building is not permission to install. Do not remotely flash/reboot production
 wrt1/wrt2, or copy an old overlay wholesale to test this image.

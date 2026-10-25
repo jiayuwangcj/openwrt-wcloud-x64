@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  OPENWRT_REF: v25.12.5
-  OPENWRT_COMMIT: f0a60eee2fe051741c643ea6118718aae1ef17fb
+  OPENWRT_REF: v25.12.6
+  OPENWRT_COMMIT: 64900e756efa667774214f9c6b17c113222e01f7
   TZ: Asia/Shanghai
 
 defaults:
@@ -28,7 +28,9 @@ jobs:
     timeout-minutes: 350
     steps:
       - name: Checkout build configuration
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Test build harness without compiling firmware
         run: bash ci/test.sh
@@ -109,7 +111,7 @@ jobs:
             > "$RUNNER_TEMP/openwrt-firmware/build-provenance.txt"
 
       - name: Upload firmware artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: openwrt-${{ env.OPENWRT_REF }}-x86-64-${{ github.run_id }}
           path: ${{ runner.temp }}/openwrt-firmware/
@@ -119,7 +121,7 @@ jobs:
 
       - name: Upload diagnostics even on failure
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: openwrt-diagnostics-${{ github.run_id }}
           path: ${{ runner.temp }}/openwrt-diagnostics/
@@ -135,16 +137,18 @@ jobs:
 
   release:
     name: Publish verified firmware release
+    timeout-minutes: 15
     needs: build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - name: Download verified firmware
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: openwrt-${{ env.OPENWRT_REF }}-x86-64-${{ github.run_id }}
           path: firmware
+          digest-mismatch: error
 
       - name: Verify downloaded firmware checksums
         working-directory: firmware
@@ -160,7 +164,7 @@ jobs:
           cat > "$notes" <<EOF
           OpenWrt ${OPENWRT_REF}, x86-64, built from pinned source ${OPENWRT_COMMIT}.
 
-          Includes standard kernel WireGuard, wireguard-tools and LuCI protocol support.
+          Includes standard kernel WireGuard, SQM/CAKE, SmartDNS, script runtimes and diagnostic tools.
           Firmware manifests and SHA256 checksums passed CI validation.
           BIOS: *-combined.img.gz; UEFI: *-combined-efi.img.gz.
           Verify downloads against sha256sums before use.
