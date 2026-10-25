@@ -19,6 +19,17 @@
 并发限制只放在耗时的固件构建上，`cancel-in-progress: false` 保留已开始的构建。
 普通检查独立运行，不等待旧固件构建结束。修改 CI 不会改变已运行任务的代码快照。
 
+带发布标记的提交通过检查后，`Reserve release tag` 先将本次源码 SHA 固定为
+`<OpenWrt版本>-x86-64-<run ID>`，再允许编译。重试任务复用同一个 tag，绝不移动已有
+tag；没有产物的预留 tag 不代表发布成功。若预留失败，立即停止，避免编译数小时后才
+发现权限问题。普通提交和 PR 不创建 tag。
+
+发布时再次核对 tag 与固件来源 SHA，使用 `gh release create --verify-tag` 关联已有
+tag，不传 `--target`。这是为了避免构建期间 master 的工作流更新后，GitHub 将旧
+`target_commitish` 与默认分支比较，额外要求内置 `GITHUB_TOKEN` 无法取得的 Workflows
+写权限（[官方说明](https://docs.github.com/en/rest/releases/releases#create-a-release)）。
+不使用移动中的 master 作为固件来源，也不添加额外的长期 Token。
+
 ## 脚本职责
 
 | 文件 | 职责 |
@@ -28,6 +39,7 @@
 | `ci/compile-firmware.sh` | 下载包源码、并行编译，失败后单线程重试；仅允许官方临时 runner |
 | `ci/validate-config.sh` | 拒绝丢失的功能设置和禁止的软件替代项 |
 | `ci/stage-firmware.sh` | 校验镜像、全部显式选择的软件包及 SHA256，整理发布文件 |
+| `ci/release-tag.sh` | 编译前预留源码 tag；发布时只验证，不创建或移动 tag |
 | `ci/publish-release.sh` | 复核产物对应的配置/上游提交与校验和，上传完整草稿后再发布 |
 | `ci/notify_discord.py` | 仅转发白名单 CI 状态，使用 Python 标准库，无第三方通知 Action |
 
@@ -61,7 +73,7 @@ Checks 与固件构建分别在独立 runner 上使用同一个准备脚本，�
 
 由于 `workflow_run` 可访问 Secrets，通知任务只检出默认分支的可信代码，不检出
 触发它的 PR/分支，不读取或执行其产物。Checks 和构建任务仅有 contents-read 权限，
-发布任务才有 contents-write；通知任务增加 actions-read 来读取任务结果。
+只有 tag 预留与发布任务有 contents-write；通知任务增加 actions-read 来读取任务结果。
 
 ## 本地检查
 

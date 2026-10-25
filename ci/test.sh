@@ -87,5 +87,6 @@ publication_status=$?
 set -e
 [[ $publication_status == 1 ]] || { echo 'TEST_FAILED: mismatched artifact reached publication' >&2; exit 1; }
 
+python3 -B ci/test_releases.py
 python3 -B ci/test_notifications.py
 echo 'Build harness and notification tests passed (temporary fixtures only).'

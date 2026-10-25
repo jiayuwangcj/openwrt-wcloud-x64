@@ -16,6 +16,7 @@ WORKFLOWS = {
 }
 JOBS = {
     "Checks": "检查",
+    "Reserve release tag": "发布准备",
     "Build firmware": "构建",
     "Publish release": "发布",
     "Publish verified firmware release": "发布",
