@@ -3,7 +3,7 @@
 ## 当前固件构建
 
 构建基线已更新至 **OpenWrt 25.12.5 / x86_64**，GitHub Actions 使用
-Ubuntu 24.04 LTS。推送 `build/openwrt-25.12.5` 分支会触发构建，
+Ubuntu 24.04 LTS，后续统一在 `master` 维护。推送构建相关文件会触发构建，
 构建并校验通过后，镜像、SHA256 校验文件及构建来源会自动发布到
 [Releases](https://github.com/jiayuwangcj/openwrt-wcloud-x64/releases)。
 固件和诊断文件也可在对应 Actions 页的 Artifacts 下载（保留 14 天；删除构建记录也会删除产物）。
@@ -11,6 +11,10 @@ Ubuntu 24.04 LTS。推送 `build/openwrt-25.12.5` 分支会触发构建，
 
 从现有 22.03.0 跨版本升级存在配置、APK 包管理及内核模块兼容风险，
 必须先在隔离虚拟机验证；完整说明见 [稳定版构建与升级安全](docs/stable-build.md)。
+软件已按 2026-10-16 全量备份核对，包含 SQM/CAKE、SmartDNS、Python 和常用工具；
+差异与迁移事项见 [备份软件核对](docs/package-audit.md)。
+SQM 默认不启用，需配置接口和上下行速率。
+设备当前版本及标签见 [部署版本记录](docs/deployed-versions.md)。
 当前更新不包含生产高速通道守护进程与私有配置的固件打包。
 固件已选择标准内核 WireGuard、wireguard-tools 及 LuCI 协议支持，
 但不预设隧道、密钥或路由；现有 userspace 高速通道不自动迁移。

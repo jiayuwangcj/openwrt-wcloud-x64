@@ -3,7 +3,7 @@ name: Build OpenWrt
 on:
   workflow_dispatch:
   push:
-    branches: [master, build/openwrt-25.12.5]
+    branches: [master]
     paths: [config, 'ci/**', 'files/**', 'diy-part*.sh', .github/workflows/build-openwrt.yml]
 
 permissions:

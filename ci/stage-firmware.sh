@@ -15,8 +15,12 @@ done
 shopt -s nullglob
 manifests=("$source_dir/"*.manifest)
 (( ${#manifests[@]} > 0 )) || { echo 'FIRMWARE_MANIFEST_MISSING' >&2; exit 1; }
+# Validate every explicitly requested package, including SQM and backup parity.
+seed=$(cd "$(dirname "$0")/.." && pwd)/config
+mapfile -t required_packages < <(sed -n 's/^CONFIG_PACKAGE_\(.*\)=y$/\1/p' "$seed")
+(( ${#required_packages[@]} > 0 )) || { echo 'FIRMWARE_PACKAGE_SEED_EMPTY' >&2; exit 1; }
 for manifest in "${manifests[@]}"; do
-    for required in kmod-wireguard wireguard-tools luci-proto-wireguard; do
+    for required in "${required_packages[@]}"; do
         grep -Eq "^${required}([[:space:]]|$)" "$manifest" || {
             printf 'FIRMWARE_REQUIRED_PACKAGE_MISSING: %s in %s\n' "$required" "$manifest" >&2; exit 1;
         }

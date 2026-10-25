@@ -11,10 +11,10 @@ if bash ci/validate-config.sh config "$fixture_dir/missing" > "$fixture_dir/miss
     echo 'TEST_FAILED: missing package was accepted' >&2; exit 1
 fi
 grep -q 'CONFIG_REQUIRED_MISSING: CONFIG_PACKAGE_zerotier=y' "$fixture_dir/missing.log"
-for required in kmod-wireguard wireguard-tools luci-proto-wireguard; do
+for required in kmod-wireguard wireguard-tools luci-proto-wireguard luci-app-sqm sqm-scripts kmod-sched-cake kmod-ifb tc-full smartdns; do
     sed "/^CONFIG_PACKAGE_${required}=y$/d" config > "$fixture_dir/missing-wireguard"
     if bash ci/validate-config.sh config "$fixture_dir/missing-wireguard" > "$fixture_dir/missing-wireguard.log" 2>&1; then
-        echo "TEST_FAILED: missing standard WireGuard package $required was accepted" >&2; exit 1
+        echo "TEST_FAILED: missing required package $required was accepted" >&2; exit 1
     fi
     grep -q "CONFIG_REQUIRED_MISSING: CONFIG_PACKAGE_${required}=y" "$fixture_dir/missing-wireguard.log"
 done
@@ -33,9 +33,9 @@ for image in squashfs-combined squashfs-combined-efi ext4-combined; do
     printf 'test-image-%s\n' "$image" > "$fixture_images/openwrt-x86-64-generic-$image.img.gz"
 done
 printf 'do-not-upload\n' > "$fixture_images/packages/private.apk"
-for required in kmod-wireguard wireguard-tools luci-proto-wireguard; do
+while IFS= read -r required; do
     printf '%s - test-version\n' "$required" >> "$fixture_images/openwrt-test.manifest"
-done
+done < <(sed -n 's/^CONFIG_PACKAGE_\(.*\)=y$/\1/p' config)
 (
     cd "$fixture_images"
     sha256sum ./*.img.gz > sha256sums
@@ -46,10 +46,13 @@ if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/output" > /dev/
     echo 'TEST_FAILED: existing output was overwritten' >&2; exit 1
 fi
 cp "$fixture_images/openwrt-test.manifest" "$fixture_dir/complete.manifest"
-sed '/^kmod-wireguard /d' "$fixture_dir/complete.manifest" > "$fixture_images/openwrt-test.manifest"
-if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/missing-package-output" > /dev/null 2>&1; then
-    echo 'TEST_FAILED: missing WireGuard in image manifest was accepted' >&2; exit 1
-fi
+for required in kmod-wireguard luci-app-sqm sqm-scripts kmod-sched-cake kmod-ifb tc-full smartdns; do
+    sed "/^${required} /d" "$fixture_dir/complete.manifest" > "$fixture_images/openwrt-test.manifest"
+    if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/missing-$required-output" > "$fixture_dir/missing-manifest.log" 2>&1; then
+        echo "TEST_FAILED: missing $required in image manifest was accepted" >&2; exit 1
+    fi
+    grep -q "FIRMWARE_REQUIRED_PACKAGE_MISSING: $required in " "$fixture_dir/missing-manifest.log"
+done
 cp "$fixture_dir/complete.manifest" "$fixture_images/openwrt-test.manifest"
 printf 'corrupted\n' >> "$fixture_images/openwrt-x86-64-generic-ext4-combined.img.gz"
 if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/corrupt-output" > /dev/null 2>&1; then

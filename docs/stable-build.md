@@ -6,7 +6,7 @@
 - OpenWrt calls this a supported stable series, not a separately designated LTS.
 - GitHub standard hosted **Ubuntu 24.04 LTS**, not retired `ubuntu-20.04`.
 - The tag's own `feeds.conf.default` pins all feed commits; do not replace them with moving heads.
-- Push to `build/openwrt-25.12.5` (or master after review) triggers compilation.
+- Ongoing maintenance and build-triggering pushes use `master`.
 - No router deployment, external transfer services, automatic release/history deletion,
   `set-output`, or credentials are required.
 - Firmware and diagnostics are retained for 14 days on the Actions run, unless
@@ -36,14 +36,16 @@ Core services include PPPoE/IPv6, nginx LuCI/stream, OpenSSH, ZeroTier, OpenVPN,
 UPnP and diagnostic tools. `ip-full` replaces `ip-tiny` for JSON route inspection.
 APK and `luci-app-package-manager` replace the old opkg UI. Legacy optional themes,
 obsolete `luci-ssl-nginx`/`nginx-all-module` names and removed nft-qos/ipset-dns
-selections are not carried forward. SQM/CAKE and DNSPod China DDNS are available,
+selections are not carried forward. Available legacy themes are restored after the
+backup audit. SQM/CAKE, SmartDNS and DNSPod China DDNS are installed,
 but are not enabled/configured by this repository. No secrets are baked in.
 
 The firmware now includes standard `kmod-wireguard`, `wireguard-tools` and
 `luci-proto-wireguard`, alongside matching TUN/CAKE/IFB modules from this build.
 These modules are compiled against the same kernel and ABI as the image; never
 copy old `.ko` files or force-install modules into the new firmware. CI checks both
-the resolved configuration and final image manifests for all three WireGuard packages.
+the resolved configuration and final image manifests for every explicitly selected
+package, including WireGuard, SQM and the restored backup applications.
 
 Production `highflowd`, `highflow-helper`, private configuration and userspace
 `wireguard-go` binaries are **not bundled by this baseline update**. Their packaging,
@@ -74,3 +76,8 @@ wrt1/wrt2, or copy an old overlay wholesale to test this image.
 
 Old preinit address customization is not copied: recovery addressing is per-node.
 Check upstream default LAN addressing before booting an image on an existing LAN.
+
+## Backup package audit (2026-10-25)
+
+See [package-audit.md](package-audit.md) for the verified backup inventory,
+restored applications, changed package names and services requiring migration.
