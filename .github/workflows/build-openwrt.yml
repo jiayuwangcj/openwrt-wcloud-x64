@@ -1,10 +1,8 @@
 name: Build OpenWrt
 
 on:
-  workflow_dispatch:
   push:
     branches: [master]
-    paths: [config, 'ci/**', 'files/**', 'diy-part*.sh', .github/workflows/build-openwrt.yml]
 
 permissions:
   contents: read
@@ -24,6 +22,8 @@ defaults:
 
 jobs:
   build:
+    # Only the pushed branch tip authorizes a build; ordinary pushes skip all jobs.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && contains(github.event.head_commit.message, '[publish]')
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     steps:

@@ -6,7 +6,13 @@
 - OpenWrt calls this a supported stable series, not a separately designated LTS.
 - GitHub standard hosted **Ubuntu 24.04 LTS**, not retired `ubuntu-20.04`.
 - The tag's own `feeds.conf.default` pins all feed commits; do not replace them with moving heads.
-- Ongoing maintenance and build-triggering pushes use `master`.
+- Ongoing maintenance uses `master`. Builds require `[publish]` in the message of
+  the branch-tip commit pushed to `master`. Ordinary pushes skip the build job;
+  the dependent Release job is skipped as well. A marker on an earlier commit
+  in the same push is not sufficient.
+- A marked empty commit can publish an already reviewed tree. There is no path
+  filter and no manual workflow-dispatch bypass for firmware builds. GitHub may
+  display a skipped workflow for an unmarked push, but no build runner is started.
 - No router deployment, external transfer services, automatic release/history deletion,
   `set-output`, or credentials are required.
 - Firmware and diagnostics are retained for 14 days on the Actions run, unless
