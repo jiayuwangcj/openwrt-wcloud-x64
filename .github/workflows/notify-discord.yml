@@ -3,7 +3,7 @@ name: Discord CI notifications
 on:
   workflow_run:
     workflows: [OpenWrt CI, Build OpenWrt, Check upstream stable release]
-    types: [requested, in_progress, completed]
+    types: [in_progress, completed]
 
 permissions:
   contents: read

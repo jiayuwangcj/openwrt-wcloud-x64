@@ -34,6 +34,7 @@ SQM 默认不启用，需配置接口和上下行速率。
 固件已选择标准内核 WireGuard、wireguard-tools 及 LuCI 协议支持，
 但不预设隧道、密钥或路由；现有 userspace 高速通道不自动迁移。
 
+CI 工作提示遵循 [分流规范](CI_NOTIFICATION_POLICY.md)，独立报告保持各工程原有约定。
 CI 分组、触发规则及 Discord 通知见 [CI 维护说明](docs/ci.md)。
 上游同步及安全审查见 [上游审查记录](docs/upstream-review.md)。
 

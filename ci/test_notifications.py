@@ -24,6 +24,7 @@ class NotificationTests(unittest.TestCase):
             {"name": "PRIVATE_JOB_NAME", "conclusion": "failure"}])
         encoded = json.dumps(message)
         self.assertNotIn("PRIVATE_", encoded)
+        self.assertTrue(message["embeds"][0]["title"].startswith("[CI 结束] router"))
         self.assertEqual(message["allowed_mentions"], {"parse": []})
         self.assertIn("发布：已跳过", message["embeds"][0]["description"])
         self.assertEqual(message["embeds"][0]["url"],
@@ -33,6 +34,8 @@ class NotificationTests(unittest.TestCase):
         for action, expected in [("requested", "已排队"), ("in_progress", "开始执行")]:
             message = notifier.build_message(self.event(action), "example/router")
             self.assertIn(expected, message["embeds"][0]["description"])
+            phase = "CI 开始" if action == "in_progress" else "CI 排队"
+            self.assertTrue(message["embeds"][0]["title"].startswith(f"[{phase}] router"))
 
     def test_repository_mismatch_is_rejected(self):
         with self.assertRaises(ValueError):

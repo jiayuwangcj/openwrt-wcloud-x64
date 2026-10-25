@@ -62,9 +62,11 @@ def build_message(event, repository, jobs=()):
             lines.append(f"[下载 Release](https://github.com/{repository}/releases)")
     color = 0x2ECC71 if run.get("conclusion") == "success" else (
         0xE74C3C if run.get("conclusion") in ("failure", "timed_out") else 0x3498DB)
+    phase = {"requested": "CI 排队", "in_progress": "CI 开始", "completed": "CI 结束"}[action]
+    project = repository.split("/", 1)[1]
     return {
         "allowed_mentions": {"parse": []},
-        "embeds": [{"title": workflow, "description": "\n".join(lines),
+        "embeds": [{"title": f"[{phase}] {project} · {workflow}", "description": "\n".join(lines),
                     "url": f"https://github.com/{repository}/actions/runs/{run_id}",
                     "color": color}],
     }
