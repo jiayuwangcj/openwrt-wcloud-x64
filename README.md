@@ -1,4 +1,4 @@
-# 个人使用，一些pve lxc相关入门脚本
+# OpenWrt x86_64 固件与部署记录
 
 ## 当前固件构建
 
@@ -25,7 +25,13 @@ SQM 默认不启用，需配置接口和上下行速率。
 
 **English** | [中文](https://p3terx.com/archives/build-openwrt-with-github-actions.html)
 
-## PVE shell use lxc scripts
+## LXC 历史实验（已放弃，2026-10-25）
+
+已决定停止推进 OpenWrt LXC 部署，继续使用虚拟机。根据此前实际测试，
+LXC 相比虚拟机的性能提升不超过 10%，家用场景无明显收益；共享宿主机
+内核带来的隔离性损失不值得交换这部分性能。详见 [LXC 停止推进记录](docs/lxc-status.md)。
+
+以下命令和 `pve/200.conf` 仅作历史存档，不作为当前部署指南。
 
 ``` bash
 pveam list # 显示所有可用的lxc模版
