@@ -4,7 +4,10 @@
 
 构建基线已更新至 **OpenWrt 25.12.6 / x86_64**，GitHub Actions 使用
 Ubuntu 24.04 LTS，后续统一在 `master` 维护。只有推送到 `master` 的最新提交
-信息包含 `[publish]` 标记时才启动构建；普通提交会跳过构建和发布。
+信息包含 `[publish]` 标记时才编译固件并发布。所有分支的普通 push，以及目标为
+`master` 的 PR，都会执行 `Checks`：脚本/打包校验测试、工作流语法检查、
+固定 OpenWrt 与 feeds 下的真实配置解析。检查失败会阻止带标记提交的构建和发布。
+检查独立运行，不会被正在进行的固件编译阻塞；普通提交跳过固件编译和发布。
 构建并校验通过后，镜像、SHA256 校验文件及构建来源会自动发布到
 [Releases](https://github.com/jiayuwangcj/openwrt-wcloud-x64/releases)。
 固件和诊断文件也可在对应 Actions 页的 Artifacts 下载（保留 14 天；删除构建记录也会删除产物）。
@@ -19,6 +22,7 @@ git push origin master
 
 标记检查推送后的最新提交信息；同一次推送中较早提交的标记不会触发。
 允许空提交触发发布，不再限制修改文件路径，也不提供手动 Run workflow 绕过标记。
+普通检查不下载/编译固件软件包，不能替代完整固件编译及实机验证。
 
 从现有 22.03.0 跨版本升级存在配置、APK 包管理及内核模块兼容风险，
 必须先在隔离虚拟机验证；完整说明见 [稳定版构建与升级安全](docs/stable-build.md)。
@@ -30,6 +34,7 @@ SQM 默认不启用，需配置接口和上下行速率。
 固件已选择标准内核 WireGuard、wireguard-tools 及 LuCI 协议支持，
 但不预设隧道、密钥或路由；现有 userspace 高速通道不自动迁移。
 
+CI 分组、触发规则及 Discord 通知见 [CI 维护说明](docs/ci.md)。
 上游同步及安全审查见 [上游审查记录](docs/upstream-review.md)。
 
 以下内容为历史模板说明。
@@ -77,12 +82,9 @@ A template for building OpenWrt with GitHub Actions
 
 ## Usage
 
-- Click the [Use this template](https://github.com/P3TERX/Actions-OpenWrt/generate) button to create a new repository.
-- Generate `.config` files using [Lean's OpenWrt](https://github.com/coolsnowwolf/lede) source code. ( You can change it through environment variables in the workflow file. )
-- Push `.config` file to the GitHub repository.
-- Select `Build OpenWrt` on the Actions page.
-- Click the `Run workflow` button.
-- When the build is complete, click the `Artifacts` button in the upper right corner of the Actions page to download the binaries.
+- 在 `master` 维护功能种子 `config`。普通 push 和指向 `master` 的 PR 自动执行检查。
+- 发布时使用本文开头的带标记提交；检查通过后才会编译和发布固件。
+- 从 Releases 下载镜像并核对 SHA256，在隔离虚拟机验证后再安排升级。
 
 ## Tips
 
