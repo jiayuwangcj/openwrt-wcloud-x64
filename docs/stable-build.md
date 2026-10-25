@@ -26,7 +26,8 @@
   compilation; permission failures stop the pipeline before the expensive build.
   Checks and compilation retain read-only access. After firmware validation, a separate job with
   `contents: write` downloads and rechecks the firmware, uploads all image and
-  provenance files to a draft Release, then publishes it as Latest. Publication verifies
+  the BIOS/SquashFS disk image, its package manifest, SHA256 and build provenance
+  to a draft Release, then publishes it as Latest. Publication verifies
   the existing tag without passing an old `--target` to GitHub's release endpoint.
   Release tags contain the OpenWrt version and run ID; job retries reuse the tag.
   Releases are not automatically
@@ -40,10 +41,12 @@ after 24 hours. That branch is preserved, not reused as the new baseline.
 `config` is a feature seed, replacing generated 22.03-era kernel, GCC, library and
 dependency selections. CI runs `make defconfig` and refuses to continue if any
 requested setting disappears. Target defaults choose matching hardware drivers.
-BIOS/EFI, ext4/squashfs and rootfs tar images remain available, with the original
-200 MiB kernel / 1800 MiB rootfs partition sizes.
-OpenWrt LXC deployment was abandoned on 2026-10-25; rootfs tar remains a
-generic artifact, not a maintained LXC deployment path. See
+Both deployed routers use BIOS/SquashFS. Only
+`openwrt-x86-64-generic-squashfs-combined.img.gz` is distributed, with the original
+200 MiB kernel / 1800 MiB rootfs partition sizes. EFI, ext4, initramfs and tar
+formats are disabled. Standalone kernel/rootfs files produced internally by
+OpenWrt are excluded from firmware Artifacts and Releases.
+OpenWrt LXC deployment was abandoned on 2026-10-25. See
 [the LXC decision record](lxc-status.md).
 
 The first CI run passed runner/dependency/feed preparation and caught the removed

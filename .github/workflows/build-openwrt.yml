@@ -98,7 +98,7 @@ jobs:
       - name: Verify firmware and attach provenance
         run: |
           bash ci/stage-firmware.sh "$RUNNER_TEMP/openwrt" "$RUNNER_TEMP/firmware"
-          cp "$RUNNER_TEMP/diagnostics/"{resolved.config,diffconfig,openwrt-commit,feed-commits,feeds.conf.pinned,build-provenance.txt} \
+          cp "$RUNNER_TEMP/diagnostics/build-provenance.txt" \
             "$RUNNER_TEMP/firmware/"
 
       - name: Upload verified firmware

@@ -30,6 +30,13 @@ tag，不传 `--target`。这是为了避免构建期间 master 的工作流更�
 写权限（[官方说明](https://docs.github.com/en/rest/releases/releases#create-a-release)）。
 不使用移动中的 master 作为固件来源，也不添加额外的长期 Token。
 
+固件 Artifact 和 Release 使用明确文件白名单，只包含
+`openwrt-x86-64-generic-squashfs-combined.img.gz`、`sha256sums`、
+`openwrt-x86-64-generic.manifest` 和 `build-provenance.txt`。
+校验文件只列出这一个 BIOS/SquashFS 镜像，发布时不忽略缺失文件。
+EFI、ext4、initramfs 和 tar 格式已禁用；上游仍生成的内部 kernel/rootfs 文件不上传。
+完整配置、固定 feeds 等排障资料仅保留在独立诊断 Artifact 中。
+
 ## 脚本职责
 
 | 文件 | 职责 |

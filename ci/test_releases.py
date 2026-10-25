@@ -12,6 +12,7 @@ import unittest
 SCRIPTS = Path(__file__).resolve().parent
 SOURCE = "a" * 40
 TAG = "v25.12.6-x86-64-123"
+IMAGE = "openwrt-x86-64-generic-squashfs-combined.img.gz"
 MOCK_GH = r'''#!/usr/bin/env python3
 import json, os, sys
 from pathlib import Path
@@ -49,9 +50,10 @@ class ReleaseTests(unittest.TestCase):
         self.firmware = self.root / "firmware"
         self.firmware.mkdir()
         data = b"verified firmware fixture\n"
-        (self.firmware / "test.img.gz").write_bytes(data)
+        (self.firmware / IMAGE).write_bytes(data)
+        (self.firmware / "openwrt-x86-64-generic.manifest").write_text("sqm-scripts - test\n")
         (self.firmware / "sha256sums").write_text(
-            f"{hashlib.sha256(data).hexdigest()}  test.img.gz\n")
+            f"{hashlib.sha256(data).hexdigest()}  {IMAGE}\n")
         (self.firmware / "build-provenance.txt").write_text(
             f"Configuration commit: {SOURCE}\nOpenWrt: v25.12.6 (upstream)\n")
 
@@ -96,6 +98,8 @@ class ReleaseTests(unittest.TestCase):
 
     def test_publication_uses_verified_existing_tag_without_target(self):
         self.set_tag()
+        (self.firmware / "private.apk").write_text("do not upload")
+        (self.firmware / "openwrt-x86-64-generic-ext4-combined.img.gz").write_text("unused")
         result = self.run_script("publish-release.sh", self.firmware)
         self.assertEqual(result.returncode, 0, result.stderr)
         create = next(call for call in self.calls() if call[:2] == ["release", "create"])
@@ -103,6 +107,9 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("--verify-tag", create)
         self.assertIn("--draft", create)
         self.assertNotIn("--target", create)
+        self.assertIn(IMAGE, create)
+        self.assertNotIn("private.apk", create)
+        self.assertNotIn("openwrt-x86-64-generic-ext4-combined.img.gz", create)
         self.assertEqual(self.calls()[-1][:3], ["release", "edit", TAG])
 
     def test_corrupt_firmware_or_wrong_tag_cannot_be_published(self):
@@ -111,7 +118,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertFalse(any(call[0] == "release" for call in self.calls()))
         (self.root / "calls").unlink()
         self.set_tag()
-        (self.firmware / "test.img.gz").write_text("corrupt")
+        (self.firmware / IMAGE).write_text("corrupt")
         self.assertNotEqual(self.run_script("publish-release.sh", self.firmware).returncode, 0)
         self.assertEqual(self.calls(), [])
 

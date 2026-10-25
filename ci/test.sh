@@ -38,6 +38,14 @@ for forbidden in wireguard-go dropbear ip-tiny; do
     fi
     grep -q "CONFIG_FORBIDDEN_SELECTED: $forbidden" "$fixture_dir/forbidden.log"
 done
+for disabled in TARGET_ROOTFS_INITRAMFS TARGET_ROOTFS_TARGZ TARGET_ROOTFS_EXT4FS GRUB_EFI_IMAGES; do
+    cp config "$fixture_dir/forbidden-image"
+    printf 'CONFIG_%s=y\n' "$disabled" >> "$fixture_dir/forbidden-image"
+    if bash ci/validate-config.sh config "$fixture_dir/forbidden-image" > "$fixture_dir/forbidden-image.log" 2>&1; then
+        echo "TEST_FAILED: disabled image format $disabled was accepted" >&2; exit 1
+    fi
+    grep -q "CONFIG_IMAGE_FORMAT_FORBIDDEN: $disabled" "$fixture_dir/forbidden-image.log"
+done
 
 fixture_images=$fixture_dir/source/bin/targets/x86/64
 mkdir -p "$fixture_images/packages"
@@ -46,7 +54,7 @@ for image in squashfs-combined squashfs-combined-efi ext4-combined; do
 done
 printf 'do-not-upload\n' > "$fixture_images/packages/private.apk"
 while IFS= read -r required; do
-    printf '%s - test-version\n' "$required" >> "$fixture_images/openwrt-test.manifest"
+    printf '%s - test-version\n' "$required" >> "$fixture_images/openwrt-x86-64-generic.manifest"
 done < <(sed -n 's/^CONFIG_PACKAGE_\(.*\)=y$/\1/p' config)
 (
     cd "$fixture_images"
@@ -54,23 +62,27 @@ done < <(sed -n 's/^CONFIG_PACKAGE_\(.*\)=y$/\1/p' config)
 )
 bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/output"
 test ! -e "$fixture_dir/output/packages"
+[[ $(find "$fixture_dir/output" -maxdepth 1 -type f | wc -l) == 3 ]]
+test ! -e "$fixture_dir/output/openwrt-x86-64-generic-ext4-combined.img.gz"
+test ! -e "$fixture_dir/output/openwrt-x86-64-generic-squashfs-combined-efi.img.gz"
+[[ $(wc -l < "$fixture_dir/output/sha256sums") == 1 ]]
 if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/output" > /dev/null 2>&1; then
     echo 'TEST_FAILED: existing output was overwritten' >&2; exit 1
 fi
-cp "$fixture_images/openwrt-test.manifest" "$fixture_dir/complete.manifest"
+cp "$fixture_images/openwrt-x86-64-generic.manifest" "$fixture_dir/complete.manifest"
 for required in kmod-wireguard luci-app-sqm sqm-scripts kmod-sched-cake kmod-ifb tc-full smartdns; do
-    sed "/^${required} /d" "$fixture_dir/complete.manifest" > "$fixture_images/openwrt-test.manifest"
+    sed "/^${required} /d" "$fixture_dir/complete.manifest" > "$fixture_images/openwrt-x86-64-generic.manifest"
     if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/missing-$required-output" > "$fixture_dir/missing-manifest.log" 2>&1; then
         echo "TEST_FAILED: missing $required in image manifest was accepted" >&2; exit 1
     fi
     grep -q "FIRMWARE_REQUIRED_PACKAGE_MISSING: $required in " "$fixture_dir/missing-manifest.log"
 done
-cp "$fixture_dir/complete.manifest" "$fixture_images/openwrt-test.manifest"
-printf 'corrupted\n' >> "$fixture_images/openwrt-x86-64-generic-ext4-combined.img.gz"
+cp "$fixture_dir/complete.manifest" "$fixture_images/openwrt-x86-64-generic.manifest"
+printf 'corrupted\n' >> "$fixture_images/openwrt-x86-64-generic-squashfs-combined.img.gz"
 if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/corrupt-output" > /dev/null 2>&1; then
     echo 'TEST_FAILED: corrupted firmware was accepted' >&2; exit 1
 fi
-rm -- "$fixture_images/openwrt-x86-64-generic-squashfs-combined-efi.img.gz"
+rm -- "$fixture_images/openwrt-x86-64-generic-squashfs-combined.img.gz"
 if bash ci/stage-firmware.sh "$fixture_dir/source" "$fixture_dir/incomplete-output" > /dev/null 2>&1; then
     echo 'TEST_FAILED: incomplete firmware was accepted' >&2; exit 1
 fi

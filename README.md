@@ -10,6 +10,9 @@ Ubuntu 24.04 LTS，后续统一在 `master` 维护。只有推送到 `master` �
 检查独立运行，不会被正在进行的固件编译阻塞；普通提交跳过固件编译和发布。
 构建并校验通过后，镜像、SHA256 校验文件及构建来源会自动发布到
 [Releases](https://github.com/jiayuwangcj/openwrt-wcloud-x64/releases)。
+只发布两台现有 BIOS/SquashFS 设备需要的
+`openwrt-x86-64-generic-squashfs-combined.img.gz`，另附 `sha256sums`、
+软件包清单和 `build-provenance.txt`；其他配置与 feeds 记录放在诊断 Artifact。
 固件和诊断文件也可在对应 Actions 页的 Artifacts 下载（保留 14 天；删除构建记录也会删除产物）。
 不自动刷写路由器，也不自动删除 Release。
 
