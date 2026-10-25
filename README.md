@@ -4,8 +4,10 @@
 
 构建基线已更新至 **OpenWrt 25.12.5 / x86_64**，GitHub Actions 使用
 Ubuntu 24.04 LTS。推送 `build/openwrt-25.12.5` 分支会触发构建，
-固件和诊断文件在对应 Actions 页的 Artifacts 下载（保留 14 天）。
-不自动刷写路由器，也不自动发布/删除 Release。
+构建并校验通过后，镜像、SHA256 校验文件及构建来源会自动发布到
+[Releases](https://github.com/jiayuwangcj/openwrt-wcloud-x64/releases)。
+固件和诊断文件也可在对应 Actions 页的 Artifacts 下载（保留 14 天；删除构建记录也会删除产物）。
+不自动刷写路由器，也不自动删除 Release。
 
 从现有 22.03.0 跨版本升级存在配置、APK 包管理及内核模块兼容风险，
 必须先在隔离虚拟机验证；完整说明见 [稳定版构建与升级安全](docs/stable-build.md)。

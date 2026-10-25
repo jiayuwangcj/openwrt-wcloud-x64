@@ -9,8 +9,13 @@
 - Push to `build/openwrt-25.12.5` (or master after review) triggers compilation.
 - No router deployment, external transfer services, automatic release/history deletion,
   `set-output`, or credentials are required.
-- Firmware and diagnostics are retained for 14 days on the Actions run.
-  There is no automatic public Release publication.
+- Firmware and diagnostics are retained for 14 days on the Actions run, unless
+  the run is deleted sooner (which also removes its artifacts).
+- After the build and firmware validation succeed, a separate job with
+  `contents: write` downloads and rechecks the firmware, uploads all image and
+  provenance files to a draft Release, then publishes it as Latest. Release tags
+  contain the OpenWrt version, run ID and run attempt. Releases are not automatically
+  deleted. Download images from the repository Releases page for long-term access.
 
 The September `wireguard-v22.03.0` build never obtained a runner and was cancelled
 after 24 hours. That branch is preserved, not reused as the new baseline.

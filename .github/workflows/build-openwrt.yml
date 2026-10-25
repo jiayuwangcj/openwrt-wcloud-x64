@@ -132,3 +132,50 @@ jobs:
           printf '### OpenWrt firmware build\n\n- Release: `%s`\n- Source: `%s`\n- Runner: Ubuntu 24.04\n- This workflow never deploys to routers.\n' \
             "$OPENWRT_REF" "$OPENWRT_COMMIT" >> "$GITHUB_STEP_SUMMARY"
           df -h >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Publish verified firmware release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified firmware
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: openwrt-${{ env.OPENWRT_REF }}-x86-64-${{ github.run_id }}
+          path: firmware
+
+      - name: Verify downloaded firmware checksums
+        working-directory: firmware
+        run: sha256sum -c --ignore-missing sha256sums
+
+      - name: Publish images and provenance to Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${OPENWRT_REF}-x86-64-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          notes="$RUNNER_TEMP/release-notes.md"
+          cat > "$notes" <<EOF
+          OpenWrt ${OPENWRT_REF}, x86-64, built from pinned source ${OPENWRT_COMMIT}.
+
+          Includes standard kernel WireGuard, wireguard-tools and LuCI protocol support.
+          Firmware manifests and SHA256 checksums passed CI validation.
+          BIOS: *-combined.img.gz; UEFI: *-combined-efi.img.gz.
+          Verify downloads against sha256sums before use.
+
+          Build configuration: ${GITHUB_SHA}
+          Build: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          This image has not been boot-tested on your devices. Production highflowd,
+          highflow-helper and private tunnel configuration are not included.
+          Test major-version upgrades in an isolated VM before deployment.
+          EOF
+          gh release create "$tag" firmware/* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "OpenWrt ${OPENWRT_REF} x86-64 (build ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT})" \
+            --notes-file "$notes" --draft
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          printf '\nRelease: https://github.com/%s/releases/tag/%s\n' \
+            "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"
