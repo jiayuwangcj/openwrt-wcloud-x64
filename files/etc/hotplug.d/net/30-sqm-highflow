@@ -1,0 +1,78 @@
+#!/bin/sh
+# Only reattach configured CAKE to the userspace highflow TUN device.
+[ "${ACTION:-}" = add ] && [ "${DEVICENAME:-}" = wg-highflow ] || exit 0
+/etc/init.d/sqm enabled || exit 0
+. /lib/functions.sh
+
+dev=wg-highflow
+tag=sqm-highflow
+matches=0
+select_queue() {
+    local iface enabled qdisc
+    config_get iface "$1" interface
+    config_get enabled "$1" enabled 0
+    [ "$iface" = "$dev" ] && [ "$enabled" = 1 ] || return 0
+    matches=$((matches + 1))
+    config_get qdisc "$1" qdisc
+    config_get upload "$1" upload
+    config_get download "$1" download
+    [ "$qdisc" = cake ] || invalid=1
+}
+config_load sqm || exit 1
+config_foreach select_queue queue
+[ "$matches" = 0 ] && exit 0
+if [ "$matches" != 1 ] || [ "${invalid:-0}" != 0 ]; then
+    logger -t "$tag" -p daemon.err "SQMH_CONFIG: expected one enabled CAKE queue for $dev"
+    exit 1
+fi
+case "$upload:$download" in
+    *[!0-9:]*|:*|*:) logger -t "$tag" -p daemon.err "SQMH_RATES: invalid rates for $dev"; exit 1 ;;
+esac
+[ "$upload" -eq 0 ] && [ "$download" -eq 0 ] && exit 0
+[ -r "/sys/class/net/$dev/tun_flags" ] || exit 0
+index=$(cat "/sys/class/net/$dev/ifindex") || exit 1
+lock=/var/run/sqm-highflow.lock
+stamp=/var/run/sqm-highflow.last
+mkdir "$lock" 2>/dev/null || {
+    logger -t "$tag" -p daemon.warn "SQMH_BUSY: another reattach is active; skip $dev"
+    exit 0
+}
+trap 'rmdir "$lock"' EXIT
+
+same_device() { [ "$(cat "/sys/class/net/$dev/ifindex" 2>/dev/null)" = "$index" ]; }
+cake_present() { tc qdisc show dev "$1" root 2>/dev/null | grep -q '^qdisc cake '; }
+queues_present() {
+    [ "$upload" -eq 0 ] || cake_present "$dev" || return 1
+    if [ "$download" -ne 0 ]; then
+        cake_present "ifb4$dev" || return 1
+        tc filter show dev "$dev" parent ffff: 2>/dev/null |
+            grep -qF "Redirect to device ifb4$dev" || return 1
+    fi
+}
+expected="$index:$upload:$download"
+if [ "$(cat "$stamp" 2>/dev/null)" = "$expected" ] && queues_present; then
+    exit 0
+fi
+logger -t "$tag" "SQMH_BEGIN: reattach $dev ifindex=$index upload=$upload download=$download"
+if ! same_device || { [ -f "/var/run/sqm/$dev.state" ] && ! /usr/lib/sqm/run.sh stop "$dev"; }; then
+    logger -t "$tag" -p daemon.err "SQMH_STOP: stop failed or device changed; no start for $dev"
+    exit 1
+fi
+if ! same_device; then
+    logger -t "$tag" -p daemon.err "SQMH_START: start failed or device changed for $dev"
+    exit 1
+fi
+start_status=0
+/usr/lib/sqm/run.sh start "$dev" || start_status=$?
+# run.sh can return 1 after a successful start because config_foreach ends
+# with a different interface's queue. Accept that only with read-back proof.
+case "$start_status" in
+    0|1) ;;
+    *) logger -t "$tag" -p daemon.err "SQMH_START: native start status=$start_status for $dev"; exit 1 ;;
+esac
+if ! same_device || ! queues_present; then
+    logger -t "$tag" -p daemon.err "SQMH_VERIFY: CAKE/ingress missing or device changed for $dev"
+    exit 1
+fi
+(umask 077; printf '%s\n' "$expected" > "$stamp") || exit 1
+logger -t "$tag" "SQMH_READY: CAKE restored on $dev ifindex=$index native_start_status=$start_status"

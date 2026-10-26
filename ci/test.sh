@@ -102,4 +102,6 @@ set -e
 python3 -B ci/test_releases.py
 python3 -B ci/test_notifications.py
 python3 -B ci/test_statistics.py
+sh -n files/etc/hotplug.d/net/30-sqm-highflow
+python3 -B ci/test_sqm_hotplug.py
 echo 'Build harness and notification tests passed (temporary fixtures only).'

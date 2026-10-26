@@ -26,6 +26,25 @@ load、memory、interface、ping、conntrack、processes、df 插件。依赖由
 修正不执行 tc add/change/delete。上游实现不符合已审查文本时停止构建，
 不会静默继续。脚本属于 SQM 采集包，因此无需在固件中再复制第二套脚本。
 
+## 用户态 WireGuard 重建后的 SQM 恢复
+
+`files/etc/hotplug.d/net/30-sqm-highflow` 监听内核网卡 `add`，仅处理
+`wg-highflow` TUN。守护程序直接创建网卡，不通过 netifd，因此没有逻辑
+接口 `ifup` 事件供原生 `/etc/hotplug.d/iface/11-sqm` 使用。
+
+钩子要求 SQM 已开机启用，且仅有一个启用的匹配 CAKE 配置；调用原生
+`run.sh stop wg-highflow` 清理残留状态，再 `start wg-highflow`，验证上传
+CAKE、下载 IFB CAKE 及 ingress 重定向。速率读取 UCI，不写死带宽。
+仅锁定本钩子，用 ifindex 检查接口身份；同一实例已恢复且队列仍在时跳过。
+停止、启动、验证异常分别记录唯一 `SQMH_*` 错误并退出，不循环重试。
+原生 run.sh 遍历到最后一个非目标队列时可能返回 1，即使目标已经启动；
+仅在设备身份和队列读取验证成功时接受该状态，并记录 native_start_status。
+
+不响应其他网卡、remove 或 change，不生成 netifd ifup，不重启全局 SQM、
+网络、防火墙、拨号或高速通道。首次部署可单独模拟该脚本的 add 事件，
+不要为验证它而重建生产 WG；真实重建事件留待自然重连验证。
+现网将此文件加入 sysupgrade.conf；固件构建自动复制 `files/` 到镜像。
+
 ## 配置与迁移
 
 菜单：Statistics → Graphs / Setup。采样间隔建议 30 秒，存储目录
