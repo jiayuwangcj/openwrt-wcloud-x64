@@ -101,4 +101,5 @@ set -e
 
 python3 -B ci/test_releases.py
 python3 -B ci/test_notifications.py
+python3 -B ci/test_statistics.py
 echo 'Build harness and notification tests passed (temporary fixtures only).'

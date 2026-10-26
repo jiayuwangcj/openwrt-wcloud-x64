@@ -32,6 +32,10 @@ git push origin master
 软件已按 2026-10-16 全量备份核对，包含 SQM/CAKE、SmartDNS、Python 和常用工具；
 差异与迁移事项见 [备份软件核对](docs/package-audit.md)。
 SQM 默认不启用，需配置接口和上下行速率。
+已加入 LuCI Statistics、SQM/CAKE、Ping、Conntrack、Processes、DF 及
+CPU/负载/内存/接口统计；内核启用 TASKSTATS 及其延迟和 I/O 记账支持。
+固件不预设私有地址、探测目标或设备接口，部署说明见
+[统计组件与内核记账](docs/statistics.md)。
 设备当前版本及标签见 [部署版本记录](docs/deployed-versions.md)。
 当前更新不包含生产高速通道守护进程与私有配置的固件打包。
 固件已选择标准内核 WireGuard、wireguard-tools 及 LuCI 协议支持，

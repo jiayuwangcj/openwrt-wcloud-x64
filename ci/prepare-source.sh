@@ -43,6 +43,8 @@ done < feeds.conf.default > "$diagnostics_dir/feed-commits"
 echo '::endgroup::'
 
 echo '::group::Resolve and validate requested packages'
+python3 "$repo_dir/ci/patch-sqm-collector.py" \
+    feeds/packages/utils/collectd/files/exec-scripts/sqm_collectd.sh
 cp "$repo_dir/config" .config
 if [[ -d $repo_dir/files ]]; then
     mkdir -p files
